@@ -7,15 +7,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CirclePlus } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { Invoices } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
 export default async function Dashboard() {
   const results = await db.select().from(Invoices);
+
   return (
     <main className="max-w-5xl mx-auto flex flex-col justify-center gap-6 my-12">
       <div className="flex justify-between">
@@ -65,7 +68,17 @@ export default async function Dashboard() {
                   href={`/invoices/${result.id}`}
                   className="block font-semibold p-4"
                 >
-                  <Badge>{result.status}</Badge>
+                  <Badge
+                    className={cn(
+                      "rounded-full",
+                      result.status === "open" && "bg-blue-500",
+                      result.status === "paid" && "bg-green-600",
+                      result.status === "void" && "bg-zinc-700",
+                      result.status === "uncollectible" && "bg-red-800"
+                    )}
+                  >
+                    {result.status}
+                  </Badge>
                 </Link>
               </TableCell>
               <TableCell className="text-right">
