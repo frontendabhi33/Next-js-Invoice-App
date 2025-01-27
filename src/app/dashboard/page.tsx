@@ -14,20 +14,37 @@ import { Button } from "@/components/ui/button";
 import { CirclePlus } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
-import { Invoices } from "@/db/schema";
+import { Customers, Invoices } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import Container from "@/components/Container";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 export default async function Dashboard() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
 
   if (!userId) return;
 
-  const results = await db
-    .select()
-    .from(Invoices)
-    .where(eq(Invoices.userId, userId));
+  let results;
+  if (orgId) {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(eq(Invoices.organizationId, orgId));
+  } else {
+    results = await db
+      .select()
+      .from(Invoices)
+      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
+      .where(and(eq(Invoices.userId, userId), isNull(Invoices.organizationId)));
+  }
+
+  const invoices = results?.map(({ Invoices, customers }) => {
+    return {
+      ...Invoices,
+      customer: customers,
+    };
+  });
 
   return (
     <main className="h-full">
@@ -55,7 +72,7 @@ export default async function Dashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((result) => (
+            {invoices.map((result) => (
               <TableRow key={result.id}>
                 <TableCell className="font-medium text-left">
                   <Link
@@ -70,11 +87,11 @@ export default async function Dashboard() {
                     href={`/invoices/${result.id}`}
                     className="block font-semibold p-4"
                   >
-                    Phillip J fry
+                    {result.customer.name}
                   </Link>
                 </TableCell>
                 <TableCell className="text-left">
-                  fry@planetexpress.com
+                  {result.customer.email}
                 </TableCell>
                 <TableCell className="text-center">
                   <Link
